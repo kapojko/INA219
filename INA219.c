@@ -70,7 +70,7 @@ bool INA219_SetCalibration(float maxExpectedCurrent, float rShunt) {
         return false;
     }
 
-    platform->debugPrint("INA219 Calibration: %u (Current LSB: %.6f, Power LSB: %.6f)\r\n", CAL, Current_LSB, Power_LSB);
+    platform->debugPrint("INA219 Calibration: %u (Current LSB: %.6f)\r\n", CAL, Current_LSB);
     return true;
 }
 
@@ -104,7 +104,7 @@ bool INA219_ReadVoltage(float *voltage, bool *convReady) {
 
     // Extract conversion ready bit
     int cnvr = busVoltageReg[1] & 0b10;
-    if (convReady != NULL) {
+    if (convReady != 0) {
         *convReady = cnvr != 0;
     }
 
