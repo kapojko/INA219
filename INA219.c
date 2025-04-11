@@ -63,14 +63,40 @@ bool INA219_SetCalibration(float maxExpectedCurrent, float rShunt) {
 
     // Write calibration
     // NOTE: CALIBRATION is the value stored in FS15:FS1
-    uint8_t calReg[2] = { (uint8_t)((CAL >> 7) & 0xFF), (uint8_t)((CAL << 1) & 0b11111110) };
+    // uint8_t calReg[2] = { (uint8_t)((CAL >> 7) & 0xFF), (uint8_t)((CAL << 1) & 0b11111110) };
+    // NOTE: In spite of the datasheet note "(1) FS0 is a void bit and will always be 0. It is not possible to write a 1 to FS0. CALIBRATION is the value stored in FS15:FS1."
+    // it seems that actually FS15:FS0 are actually used, but FS0 must be zeroed (possibly)
+    uint8_t calReg[2] = { (uint8_t)((CAL >> 8) & 0xFF), (uint8_t)(CAL & 0b11111110) };
     err = platform->i2cWriteReg(platform->i2cAddress, INA219_REG_CALIBRATION, calReg, sizeof(calReg), 1);
     if (err < 0) {
         platform->debugPrint("Error writing INA219 calibration: %d\r\n", -err);
         return false;
     }
 
-    platform->debugPrint("INA219 Calibration: %u (Current LSB: %.6f)\r\n", CAL, Current_LSB);
+    platform->debugPrint("INA219 Calibration: %x (Current LSB: %.6f)\r\n", CAL, Current_LSB);
+    return true;
+}
+
+bool INA219_ReadShuntVoltage(float *voltage) {
+    int err;
+
+    // Read shunt voltage register
+    uint8_t shuntVoltageReg[2];
+    err = platform->i2cReadReg(platform->i2cAddress, INA219_REG_SHUNT_VOLTAGE, shuntVoltageReg, sizeof(shuntVoltageReg), I2C_READ_TIMEOUT_MS);
+    if (err < 0) {
+        platform->debugPrint("Error reading INA219 shunt voltage: %d\r\n", -err);
+        *voltage = -99.0;
+        return false;
+    }
+
+    // Convert from twos complement
+    uint16_t shuntVoltage_raw = (shuntVoltageReg[0] << 8) | shuntVoltageReg[1];
+    int16_t shuntVoltage_signed = *(int16_t *)(&shuntVoltage_raw);
+    
+    // Convert to V (LSB = 10uV independent on PGA gain)
+    float shuntVoltage_float = (float)shuntVoltage_signed * 0.00001f;
+
+    *voltage = shuntVoltage_float;
     return true;
 }
 
@@ -140,7 +166,7 @@ bool INA219_ReadCurrent(float *current) {
     err = platform->i2cReadReg(platform->i2cAddress, INA219_REG_CURRENT, current_reg, sizeof(current_reg), I2C_READ_TIMEOUT_MS);
     if (err < 0) {
         platform->debugPrint("Error reading INA219 current: %d\r\n", -err);
-        *current = -1.0;
+        *current = -99.0;
         return false;
     }
 

@@ -66,6 +66,8 @@ bool INA219_SetConfiguration(enum INA219_BusVoltageRange brng, enum INA219_PGAGa
     enum INA219_ADCSettings busAdc, enum INA219_ADCSettings shuntAdc, enum INA219_OperatingMode mode);
 bool INA219_SetCalibration(float maxExpectedCurrent, float rShunt);
 
+bool INA219_ReadShuntVoltage(float *voltage);
+
 // Read bus voltage
 // voltage - outputs measured voltage
 // convReady - outputs true if conversion is ready (clears on mode change or power register read), optional
